@@ -52,7 +52,6 @@ func main()  {
 	client := pb.NewHelloServiceClient(conn)
 	reply, err := client.Hello(context.Background(), &pb.String{Value: "hello"})
 	if err != nil {
-		fmt.Println(123)
 		log.Fatal(err)
 	}
 
