@@ -16,10 +16,29 @@ import (
 type HelloServiceImpl struct{}
 
 func (p *HelloServiceImpl) Hello(ctx context.Context, args *pb.String) (*pb.String, error) {
+	panic("bug!!!")
+
 	reply := &pb.String{Value: "hello:" + args.GetValue()}
 	return reply, nil
 }
 
+// 拦截器(恢复)
+func recoveryFilter(
+	ctx context.Context,
+	req interface{},
+	info *grpc.UnaryServerInfo,
+	handler grpc.UnaryHandler,
+) (resp interface{}, err error) {
+	defer func() {
+		if err := recover(); err != nil {
+			log.Println("Recover: ", err)
+		}
+	}()
+
+	log.Println("Recovery filter")
+
+	return handler(ctx, req)
+}
 // 拦截器(tracing上报)
 func tracingFilter(
 	ctx context.Context,
@@ -71,18 +90,8 @@ func authFilter(
 	info *grpc.UnaryServerInfo,
 	handler grpc.UnaryHandler,
 ) (resp interface{}, err error) {
+	panic("auth bug!!!")
 	log.Println("Log filter")
-
-	return handler(ctx, req)
-}
-// 拦截器(恢复)
-func recoveryFilter(
-	ctx context.Context,
-	req interface{},
-	info *grpc.UnaryServerInfo,
-	handler grpc.UnaryHandler,
-) (resp interface{}, err error) {
-	log.Println("Recovery filter")
 
 	return handler(ctx, req)
 }
@@ -133,7 +142,7 @@ func main()  {
 	grpcServer := grpc.NewServer(
 		grpc.Creds(creds),
 		grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(
-			tracingFilter, prometheusFilter, logFilter, signerFilter, authFilter, recoveryFilter,
+			recoveryFilter, tracingFilter, prometheusFilter, logFilter, signerFilter, authFilter,
 		)),
 	)
 	// register hello service
